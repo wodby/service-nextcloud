@@ -26,7 +26,8 @@ Nextcloud community.
 | Containers | Nextcloud Apache application and cron sidecar |
 | Endpoint | `nextcloud`: HTTP 8080 (main) |
 | Service links | PostgreSQL and Redis required; SMTP optional |
-| Storage | One persistent volume for `/var/www/html` |
+| Integrations | Optional S3 primary storage through AWS S3, Cloudflare R2, or Backblaze B2 |
+| Storage | Persistent volume for `/var/www/html`; optional S3 bucket for file content |
 | Helm | `nextcloud/nextcloud` chart version `9.2.6` |
 
 ## Runtime behavior
@@ -56,11 +57,27 @@ Forwarded client addresses require the ingress proxy addresses or CIDR ranges
 to be entered in the optional `Trusted proxies` setting. Do not trust a range
 broader than the cluster's actual proxy network.
 
+## S3 primary storage
+
+The optional `S3 primary storage` integration supports Amazon S3, Cloudflare
+R2, and Backblaze B2. Create an empty bucket dedicated to the Nextcloud
+installation, attach the matching storage integration, and enter its name in
+the `S3 bucket` setting before the first deployment. Both the integration and
+bucket setting are required to activate object storage.
+
+Primary object storage must not be enabled on an existing installation: doing
+so makes files already stored on the persistent volume inaccessible. Nextcloud
+keeps file and directory metadata in PostgreSQL and stores opaque file content
+in the bucket, so the bucket is not a directly browsable copy of the users'
+folder structure and must be reserved for Nextcloud.
+
 ## Persistence and upgrades
 
-The persistent volume contains `/var/www/html`, including user data, generated
-configuration, themes, and installed custom applications. Back up this volume
-together with PostgreSQL.
+Without an S3 integration, the persistent volume contains `/var/www/html`,
+including user data. With S3 primary storage, user file content is stored in
+the bucket while the volume still contains generated configuration, themes,
+and installed custom applications. Back up PostgreSQL, the persistent volume,
+and, when enabled, the S3 bucket as one consistent set.
 
 Upgrade one Nextcloud major version at a time. For example, upgrade version 33
 to 34 before selecting a future version 35 option.
