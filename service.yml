@@ -33,7 +33,7 @@ settings:
 - name: admin-user
   title: Admin username
   description: Username for the initial Nextcloud administrator account.
-  default: admin
+  placeholder: admin
   required: true
   # The chart reads both admin keys from the app service's secret (nextcloud.existingSecret), which holds only secret
   # variables.
