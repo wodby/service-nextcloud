@@ -71,7 +71,7 @@ settings:
   title: S3 bucket
   description: Name of an existing, empty bucket dedicated to this Nextcloud installation. Attach a compatible S3 integration and set this before the first deployment to use primary object storage.
   placeholder: nextcloud-files
-  var: WODBY_S3_BUCKET
+  var: NEXTCLOUD_S3_BUCKET
 - name: trusted-proxies
   title: Trusted proxies
   description: Optional space-separated proxy IP addresses or CIDR ranges trusted for forwarded client headers.
@@ -137,42 +137,42 @@ integrations:
   providers:
   - name: aws
     env:
-    - name: WODBY_S3_ENABLED
+    - name: NEXTCLOUD_S3_ENABLED
       value: 'true'
-    - name: WODBY_S3_KEY
+    - name: NEXTCLOUD_S3_KEY
       value: '{{integration.variables.AWS_ACCESS_KEY_ID}}'
-    - name: WODBY_S3_SECRET
+    - name: NEXTCLOUD_S3_SECRET
       value: '{{integration.variables.AWS_SECRET_ACCESS_KEY}}'
       secret: true
-    - name: WODBY_S3_REGION
+    - name: NEXTCLOUD_S3_REGION
       value: '{{integration.variables.AWS_REGION}}'
   - name: cloudflare
     env:
-    - name: WODBY_S3_ENABLED
+    - name: NEXTCLOUD_S3_ENABLED
       value: 'true'
-    - name: WODBY_S3_HOST
+    - name: NEXTCLOUD_S3_HOST
       value: '{{integration.fields.account_id}}.r2.cloudflarestorage.com'
-    - name: WODBY_S3_KEY
+    - name: NEXTCLOUD_S3_KEY
       value: '{{integration.fields.r2_access_key_id}}'
-    - name: WODBY_S3_SECRET
+    - name: NEXTCLOUD_S3_SECRET
       value: '{{integration.fields.r2_secret_access_key}}'
       secret: true
-    - name: WODBY_S3_REGION
+    - name: NEXTCLOUD_S3_REGION
       value: auto
-    - name: WODBY_S3_PATH_STYLE
+    - name: NEXTCLOUD_S3_PATH_STYLE
       value: 'true'
   - name: backblaze
     env:
-    - name: WODBY_S3_ENABLED
+    - name: NEXTCLOUD_S3_ENABLED
       value: 'true'
-    - name: WODBY_S3_HOST
+    - name: NEXTCLOUD_S3_HOST
       value: '{{integration.fields.endpoint}}'
-    - name: WODBY_S3_KEY
+    - name: NEXTCLOUD_S3_KEY
       value: '{{integration.fields.application_key_id}}'
-    - name: WODBY_S3_SECRET
+    - name: NEXTCLOUD_S3_SECRET
       value: '{{integration.fields.application_key}}'
       secret: true
-    - name: WODBY_S3_PATH_STYLE
+    - name: NEXTCLOUD_S3_PATH_STYLE
       value: 'true'
 
 volumes:
@@ -266,25 +266,25 @@ helm:
             $CONFIG['trusted_domains'] = $hosts;
         }
 
-        $s3Enabled = filter_var(getenv('WODBY_S3_ENABLED'), FILTER_VALIDATE_BOOLEAN);
-        $s3Bucket = trim((string) getenv('WODBY_S3_BUCKET'));
+        $s3Enabled = filter_var(getenv('NEXTCLOUD_S3_ENABLED'), FILTER_VALIDATE_BOOLEAN);
+        $s3Bucket = trim((string) getenv('NEXTCLOUD_S3_BUCKET'));
         if ($s3Enabled && $s3Bucket !== '') {
             $s3Arguments = array(
                 'bucket' => $s3Bucket,
-                'key' => (string) getenv('WODBY_S3_KEY'),
-                'secret' => (string) getenv('WODBY_S3_SECRET'),
+                'key' => (string) getenv('NEXTCLOUD_S3_KEY'),
+                'secret' => (string) getenv('NEXTCLOUD_S3_SECRET'),
                 'autocreate' => false,
                 'use_ssl' => true,
-                'use_path_style' => filter_var(getenv('WODBY_S3_PATH_STYLE'), FILTER_VALIDATE_BOOLEAN),
+                'use_path_style' => filter_var(getenv('NEXTCLOUD_S3_PATH_STYLE'), FILTER_VALIDATE_BOOLEAN),
             );
 
-            $s3Host = trim((string) getenv('WODBY_S3_HOST'));
+            $s3Host = trim((string) getenv('NEXTCLOUD_S3_HOST'));
             if ($s3Host !== '') {
                 $s3Arguments['hostname'] = $s3Host;
                 $s3Arguments['port'] = 443;
             }
 
-            $s3Region = trim((string) getenv('WODBY_S3_REGION'));
+            $s3Region = trim((string) getenv('NEXTCLOUD_S3_REGION'));
             if ($s3Region === '' && preg_match('/^s3\.([^.]+)\.backblazeb2\.com$/', $s3Host, $matches)) {
                 $s3Region = $matches[1];
             }
