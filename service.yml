@@ -1,0 +1,327 @@
+name: nextcloud
+icon: nextcloud
+title: Nextcloud
+type: service
+scalable: false
+
+labels:
+- nextcloud
+- collaboration
+- file-sharing
+
+options:
+- version: '34'
+  tag: 34.0.3-apache
+  default: true
+- version: '33'
+  tag: 33.0.8-apache
+
+endpoints:
+- name: nextcloud
+  workload: main
+  ports:
+  - name: http
+    main: true
+    number: 8080
+    protocol: http
+    routeDefaults:
+      request_body_size: 3Gi
+      request_timeout: 1h
+      backend_request_timeout: 1h
+
+settings:
+- name: admin-user
+  title: Admin username
+  description: Username for the initial Nextcloud administrator account.
+  default: admin
+  required: true
+  var: NEXTCLOUD_ADMIN_USER
+- name: admin-password
+  title: Admin password
+  description: Password for the initial Nextcloud administrator account.
+  required: true
+  secret: true
+  var: NEXTCLOUD_ADMIN_PASSWORD
+- name: php-memory-limit
+  title: PHP memory limit
+  description: Maximum memory available to one PHP process.
+  default: 512M
+  var: PHP_MEMORY_LIMIT
+- name: php-upload-limit
+  title: PHP upload limit
+  description: Maximum size accepted by PHP for one upload request.
+  default: 3G
+  var: PHP_UPLOAD_LIMIT
+- name: apache-body-limit
+  title: Apache request body limit
+  description: Maximum request body in bytes. Use 0 for unlimited; Wodby route limits still apply.
+  default: '0'
+  var: APACHE_BODY_LIMIT
+- name: mail-from-address
+  title: Mail sender
+  description: Local part of the address used for outgoing Nextcloud email.
+  default: nextcloud
+  var: MAIL_FROM_ADDRESS
+- name: mail-domain
+  title: Mail domain
+  description: Domain appended to the mail sender address.
+  default: '{{service.primaryHost}}'
+  var: MAIL_DOMAIN
+- name: s3-bucket
+  title: S3 bucket
+  description: Name of an existing, empty bucket dedicated to this Nextcloud installation. Attach a compatible S3 integration and set this before the first deployment to use primary object storage.
+  placeholder: nextcloud-files
+  var: WODBY_S3_BUCKET
+- name: trusted-proxies
+  title: Trusted proxies
+  description: Optional space-separated proxy IP addresses or CIDR ranges trusted for forwarded client headers.
+  placeholder: 10.0.0.0/8
+  var: TRUSTED_PROXIES
+
+env:
+- name: OVERWRITECLIURL
+  value: '{{service.primaryURL}}'
+- name: OVERWRITEPROTOCOL
+  value: https
+
+links:
+- name: postgres
+  title: PostgreSQL
+  required: true
+  selectors:
+  - type: db
+    labels:
+    - postgres
+  helm:
+  - name: externalDatabase.host
+    value: '{{link.database.host}}'
+  - name: externalDatabase.database
+    value: '{{link.database.db.name}}'
+  - name: externalDatabase.user
+    value: '{{link.database.user.name}}'
+  - name: externalDatabase.password
+    value: '{{link.database.user.password}}'
+- name: redis
+  title: Redis
+  required: true
+  selectors:
+  - type: datastore
+    labels:
+    - redis
+  helm:
+  - name: externalRedis.host
+    value: '{{link.host}}'
+  - name: externalRedis.port
+    value: '{{link.port}}'
+  - name: externalRedis.password
+    value: '{{link.tokens.password}}'
+- name: sendmail
+  title: SMTP server
+  selectors:
+  - type: service
+    labels:
+    - smtp
+  env:
+  - name: SMTP_HOST
+    value: '{{link.host}}'
+  - name: SMTP_PORT
+    value: '{{link.port}}'
+
+integrations:
+- name: s3
+  title: S3 primary storage
+  type: storage
+  required: false
+  labels:
+  - s3
+  providers:
+  - name: aws
+    env:
+    - name: WODBY_S3_ENABLED
+      value: 'true'
+    - name: WODBY_S3_KEY
+      value: '{{integration.variables.AWS_ACCESS_KEY_ID}}'
+    - name: WODBY_S3_SECRET
+      value: '{{integration.variables.AWS_SECRET_ACCESS_KEY}}'
+      secret: true
+    - name: WODBY_S3_REGION
+      value: '{{integration.variables.AWS_REGION}}'
+  - name: cloudflare
+    env:
+    - name: WODBY_S3_ENABLED
+      value: 'true'
+    - name: WODBY_S3_HOST
+      value: '{{integration.fields.account_id}}.r2.cloudflarestorage.com'
+    - name: WODBY_S3_KEY
+      value: '{{integration.fields.r2_access_key_id}}'
+    - name: WODBY_S3_SECRET
+      value: '{{integration.fields.r2_secret_access_key}}'
+      secret: true
+    - name: WODBY_S3_REGION
+      value: auto
+    - name: WODBY_S3_PATH_STYLE
+      value: 'true'
+  - name: backblaze
+    env:
+    - name: WODBY_S3_ENABLED
+      value: 'true'
+    - name: WODBY_S3_HOST
+      value: '{{integration.fields.endpoint}}'
+    - name: WODBY_S3_KEY
+      value: '{{integration.fields.application_key_id}}'
+    - name: WODBY_S3_SECRET
+      value: '{{integration.fields.application_key}}'
+      secret: true
+    - name: WODBY_S3_PATH_STYLE
+      value: 'true'
+
+volumes:
+- name: data
+  title: Nextcloud data
+  size: 50
+  helm:
+    labels: persistence.labels
+    values:
+    - name: persistence.enabled
+      value: true
+    - name: persistence.size
+      value: '{{volumes.data.size}}Gi'
+    - name: persistence.existingClaim
+      value: '{{volumes.data.claim}}'
+
+helm:
+  name: nextcloud
+  source: https://nextcloud.github.io/helm/
+  chart: nextcloud/nextcloud
+  version: 9.2.6
+  valueMappings:
+    replicas: replicaCount
+    nameOverride: nameOverride
+    fullnameOverride: fullnameOverride
+    strategy: nextcloud.strategy
+  values:
+  - name: internalDatabase.enabled
+    value: false
+  - name: externalDatabase.enabled
+    value: true
+  - name: externalDatabase.type
+    value: postgresql
+  - name: externalRedis.enabled
+    value: true
+  - name: mariadb.enabled
+    value: false
+  - name: postgresql.enabled
+    value: false
+  - name: redis.enabled
+    value: false
+  - name: collabora.enabled
+    value: false
+  - name: imaginary.enabled
+    value: false
+  - name: metrics.enabled
+    value: false
+  - name: ingress.enabled
+    value: false
+  - name: httpRoute.enabled
+    value: false
+  - name: hpa.enabled
+    value: false
+  - name: nginx.enabled
+    value: false
+  - name: cronjob.enabled
+    value: true
+  - name: cronjob.type
+    value: sidecar
+  - name: nextcloud.host
+    value: '{{service.primaryHost}}'
+  - name: nextcloud.existingSecret.enabled
+    value: true
+  - name: nextcloud.existingSecret.secretName
+    value: '{{service.secrets.env}}'
+  - name: nextcloud.existingSecret.usernameKey
+    value: NEXTCLOUD_ADMIN_USER
+  - name: nextcloud.existingSecret.passwordKey
+    value: NEXTCLOUD_ADMIN_PASSWORD
+  - name: phpClientHttpsFix.enabled
+    value: true
+  - name: phpClientHttpsFix.protocol
+    value: https
+  - name: nextcloud.configs
+    value:
+      wodby.config.php: |-
+        <?php
+
+        $hosts = json_decode((string) getenv('WODBY_HOSTS'), true);
+        if (!is_array($hosts)) {
+            $hosts = array();
+        }
+
+        $primaryHost = getenv('WODBY_PRIMARY_HOST');
+        if ($primaryHost) {
+            $hosts[] = $primaryHost;
+        }
+
+        $hosts = array_values(array_unique(array_filter($hosts, 'is_string')));
+        if ($hosts) {
+            $CONFIG['trusted_domains'] = $hosts;
+        }
+
+        $s3Enabled = filter_var(getenv('WODBY_S3_ENABLED'), FILTER_VALIDATE_BOOLEAN);
+        $s3Bucket = trim((string) getenv('WODBY_S3_BUCKET'));
+        if ($s3Enabled && $s3Bucket !== '') {
+            $s3Arguments = array(
+                'bucket' => $s3Bucket,
+                'key' => (string) getenv('WODBY_S3_KEY'),
+                'secret' => (string) getenv('WODBY_S3_SECRET'),
+                'autocreate' => false,
+                'use_ssl' => true,
+                'use_path_style' => filter_var(getenv('WODBY_S3_PATH_STYLE'), FILTER_VALIDATE_BOOLEAN),
+            );
+
+            $s3Host = trim((string) getenv('WODBY_S3_HOST'));
+            if ($s3Host !== '') {
+                $s3Arguments['hostname'] = $s3Host;
+                $s3Arguments['port'] = 443;
+            }
+
+            $s3Region = trim((string) getenv('WODBY_S3_REGION'));
+            if ($s3Region === '' && preg_match('/^s3\.([^.]+)\.backblazeb2\.com$/', $s3Host, $matches)) {
+                $s3Region = $matches[1];
+            }
+            if ($s3Region !== '') {
+                $s3Arguments['region'] = $s3Region;
+            }
+
+            $CONFIG['objectstore'] = array(
+                'class' => '\\OC\\Files\\ObjectStore\\S3',
+                'arguments' => $s3Arguments,
+            );
+        }
+
+workloads:
+- name: main
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: '{{helm.release}}'
+      app.kubernetes.io/component: app
+  kind: deployment
+  primary: true
+  deployment:
+    strategy: recreate
+  helm:
+    annotations: podAnnotations
+    labels: podLabels
+  containers:
+  - name: nextcloud
+    image: docker.io/library/nextcloud
+    helm:
+      resources: resources
+      env: nextcloud.extraEnv
+      image:
+        repository: image.repository
+        tag: image.tag
+        registry: image.registry
+        pullPolicy: image.pullPolicy
+  - name: nextcloud-cron
+    helm:
+      resources: cronjob.sidecar.resources
