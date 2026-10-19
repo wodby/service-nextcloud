@@ -35,6 +35,9 @@ settings:
   description: Username for the initial Nextcloud administrator account.
   default: admin
   required: true
+  # The chart reads both admin keys from the app service's secret (nextcloud.existingSecret), which holds only secret
+  # variables.
+  secret: true
   var: NEXTCLOUD_ADMIN_USER
 - name: admin-password
   title: Admin password
