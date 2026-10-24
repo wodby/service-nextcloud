@@ -11,11 +11,13 @@ labels:
 
 options:
 - version: '34'
-  tag: 34.0.3-apache
+  tag: 34.0.5-apache
   default: true
+  eol: '2027-06-30T00:00:00+00:00'
 - version: '33'
-  tag: 33.0.8-apache
+  tag: 33.0.10-apache
 
+  eol: '2027-02-28T00:00:00+00:00'
 endpoints:
 - name: nextcloud
   workload: main
@@ -57,7 +59,8 @@ settings:
   var: PHP_UPLOAD_LIMIT
 - name: apache-body-limit
   title: Apache request body limit
-  description: Maximum request body in bytes. Use 0 for unlimited; Wodby route limits still apply.
+  description: Maximum request body in bytes. Use 0 for unlimited; Wodby route 
+    limits still apply.
   default: '0'
   var: APACHE_BODY_LIMIT
 - name: mail-from-address
@@ -72,12 +75,15 @@ settings:
   var: MAIL_DOMAIN
 - name: s3-bucket
   title: S3 bucket
-  description: Name of an existing, empty bucket dedicated to this Nextcloud installation. Attach a compatible S3 integration and set this before the first deployment to use primary object storage.
+  description: Name of an existing, empty bucket dedicated to this Nextcloud 
+    installation. Attach a compatible S3 integration and set this before the 
+    first deployment to use primary object storage.
   placeholder: nextcloud-files
   var: NEXTCLOUD_S3_BUCKET
 - name: trusted-proxies
   title: Trusted proxies
-  description: Optional space-separated proxy IP addresses or CIDR ranges trusted for forwarded client headers.
+  description: Optional space-separated proxy IP addresses or CIDR ranges 
+    trusted for forwarded client headers.
   placeholder: 10.0.0.0/8
   var: TRUSTED_PROXIES
 
@@ -196,7 +202,7 @@ helm:
   name: nextcloud
   source: https://nextcloud.github.io/helm/
   chart: nextcloud/nextcloud
-  version: 9.2.6
+  version: 9.4.1
   valueMappings:
     replicas: replicaCount
     nameOverride: nameOverride
