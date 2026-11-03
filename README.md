@@ -47,8 +47,8 @@ The sidecar shares the application image, configuration, and persistent volume.
 
 The generated Nextcloud configuration reads Wodby's `WODBY_HOSTS` environment
 variable. All active route and App Access hostnames are therefore accepted as
-trusted domains. When a hostname is added or removed, Wodby redeploys Nextcloud
-so that it picks up the new list.
+trusted domains. After a hostname is added or removed, Wodby marks Nextcloud as
+needing a redeploy; deploy it to apply the new list.
 
 The default Wodby route uses one-hour request timeouts and passes uploads
 through to Nextcloud as they arrive, without a route size limit. The PHP upload
