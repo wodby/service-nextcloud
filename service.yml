@@ -27,7 +27,6 @@ endpoints:
     number: 8080
     protocol: http
     routeDefaults:
-      request_body_size: 3Gi
       request_timeout: 1h
       backend_request_timeout: 1h
 
@@ -101,15 +100,20 @@ links:
   - type: db
     labels:
     - postgres
+  # The chart reads the database user and password from the app service's secret (externalDatabase.existingSecret),
+  # which holds only secret variables, so both are secret.
+  env:
+  - name: NEXTCLOUD_DB_USER
+    value: '{{link.database.user.name}}'
+    secret: true
+  - name: NEXTCLOUD_DB_PASSWORD
+    value: '{{link.database.user.password}}'
+    secret: true
   helm:
   - name: externalDatabase.host
     value: '{{link.database.host}}'
   - name: externalDatabase.database
     value: '{{link.database.db.name}}'
-  - name: externalDatabase.user
-    value: '{{link.database.user.name}}'
-  - name: externalDatabase.password
-    value: '{{link.database.user.password}}'
 - name: redis
   title: Redis
   required: true
@@ -117,13 +121,15 @@ links:
   - type: datastore
     labels:
     - redis
+  env:
+  - name: NEXTCLOUD_REDIS_PASSWORD
+    value: '{{link.tokens.password}}'
+    secret: true
   helm:
   - name: externalRedis.host
     value: '{{link.host}}'
   - name: externalRedis.port
     value: '{{link.port}}'
-  - name: externalRedis.password
-    value: '{{link.tokens.password}}'
 - name: sendmail
   title: SMTP server
   selectors:
@@ -215,8 +221,22 @@ helm:
     value: true
   - name: externalDatabase.type
     value: postgresql
+  - name: externalDatabase.existingSecret.enabled
+    value: true
+  - name: externalDatabase.existingSecret.secretName
+    value: '{{service.secrets.env}}'
+  - name: externalDatabase.existingSecret.usernameKey
+    value: NEXTCLOUD_DB_USER
+  - name: externalDatabase.existingSecret.passwordKey
+    value: NEXTCLOUD_DB_PASSWORD
   - name: externalRedis.enabled
     value: true
+  - name: externalRedis.existingSecret.enabled
+    value: true
+  - name: externalRedis.existingSecret.secretName
+    value: '{{service.secrets.env}}'
+  - name: externalRedis.existingSecret.passwordKey
+    value: NEXTCLOUD_REDIS_PASSWORD
   - name: mariadb.enabled
     value: false
   - name: postgresql.enabled
@@ -251,6 +271,12 @@ helm:
     value: NEXTCLOUD_ADMIN_USER
   - name: nextcloud.existingSecret.passwordKey
     value: NEXTCLOUD_ADMIN_PASSWORD
+  # Nextcloud upgrades its database before Apache starts, which can take many minutes. The startup probe holds the
+  # liveness probe off for up to about 15 minutes so that an upgrade is not killed halfway.
+  - name: startupProbe.enabled
+    value: true
+  - name: startupProbe.failureThreshold
+    value: 90
   - name: phpClientHttpsFix.enabled
     value: true
   - name: phpClientHttpsFix.protocol
