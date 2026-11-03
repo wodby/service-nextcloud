@@ -349,6 +349,9 @@ workloads:
   containers:
   - name: nextcloud
     image: docker.io/library/nextcloud
+    # Stock image, so Wodby passes the route hostnames only on request.
+    # wodby.config.php turns WODBY_HOSTS into trusted_domains.
+    routeMetadata: true
     helm:
       resources: resources
       env: nextcloud.extraEnv
