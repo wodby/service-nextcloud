@@ -28,7 +28,7 @@ Nextcloud community.
 | Service links | PostgreSQL and Redis required; SMTP optional |
 | Integrations | Optional S3 primary storage through AWS S3, Cloudflare R2, or Backblaze B2 |
 | Storage | Persistent volume for `/var/www/html`; optional S3 bucket for file content |
-| Helm | `nextcloud/nextcloud` chart version `9.2.6` |
+| Helm | `nextcloud/nextcloud` chart version `9.4.1` |
 
 ## Runtime behavior
 
@@ -36,9 +36,11 @@ The service disables the chart's bundled database, Redis, ingress, and
 HTTPRoute resources. Wodby supplies PostgreSQL, Redis, routing, TLS, and the
 persistent volume instead.
 
-The initial administrator password is a required secret setting. The
-administrator username defaults to `admin` and can be changed before the first
-deployment.
+The initial administrator username and password are required secret settings.
+Both apply only to the first installation.
+
+The PostgreSQL and Redis passwords reach the chart through the app service's
+Kubernetes Secret, not through plain Helm values.
 
 Nextcloud background jobs run from the chart's cron sidecar every five minutes.
 The sidecar shares the application image, configuration, and persistent volume.
@@ -48,10 +50,11 @@ variable on every process start. All active route and App Access hostnames are
 therefore accepted as trusted domains, including hostnames added after the
 initial installation.
 
-The default Wodby route accepts individual request bodies up to 3 GiB and uses
-one-hour request timeouts. Nextcloud clients normally split larger files into
-smaller requests. These route defaults and the PHP upload limit can be
-overridden per app environment.
+The default Wodby route uses one-hour request timeouts and passes uploads
+through to Nextcloud as they arrive, without a route size limit. The PHP upload
+limit (3 GB by default) caps one upload request; Nextcloud clients split larger
+files into smaller requests. Do not set the route's `request_body_size`: it
+makes the shared gateway hold every upload in memory until it is complete.
 
 Forwarded client addresses require the ingress proxy addresses or CIDR ranges
 to be entered in the optional `Trusted proxies` setting. Do not trust a range
@@ -78,6 +81,10 @@ including user data. With S3 primary storage, user file content is stored in
 the bucket while the volume still contains generated configuration, themes,
 and installed custom applications. Back up PostgreSQL, the persistent volume,
 and, when enabled, the S3 bucket as one consistent set.
+
+Nextcloud upgrades its database when a new version starts, before it serves
+requests. A startup probe gives the upgrade about 15 minutes before Kubernetes
+restarts the container.
 
 Upgrade one Nextcloud major version at a time. For example, upgrade version 33
 to 34 before selecting a future version 35 option.
