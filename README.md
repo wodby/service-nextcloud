@@ -46,9 +46,9 @@ Nextcloud background jobs run from the chart's cron sidecar every five minutes.
 The sidecar shares the application image, configuration, and persistent volume.
 
 The generated Nextcloud configuration reads Wodby's `WODBY_HOSTS` environment
-variable on every process start. All active route and App Access hostnames are
-therefore accepted as trusted domains, including hostnames added after the
-initial installation.
+variable. All active route and App Access hostnames are therefore accepted as
+trusted domains. When a hostname is added or removed, Wodby redeploys Nextcloud
+so that it picks up the new list.
 
 The default Wodby route uses one-hour request timeouts and passes uploads
 through to Nextcloud as they arrive, without a route size limit. The PHP upload
