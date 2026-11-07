@@ -349,6 +349,10 @@ workloads:
   containers:
   - name: nextcloud
     image: docker.io/library/nextcloud
+    resources:
+      request:
+        cpu: 10
+        memory: 80
     # Stock image, so Wodby passes the route hostnames only on request.
     # wodby.config.php turns WODBY_HOSTS into trusted_domains.
     routeMetadata: true
@@ -361,5 +365,9 @@ workloads:
         registry: image.registry
         pullPolicy: image.pullPolicy
   - name: nextcloud-cron
+    resources:
+      request:
+        cpu: 10
+        memory: 80
     helm:
       resources: cronjob.sidecar.resources
