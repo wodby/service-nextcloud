@@ -33,7 +33,9 @@ endpoints:
       backend_request_timeout: 1h
 
 settings:
-- name: admin-user
+# Named admin-username, not admin-user: admin-user was a secret setting in earlier revisions, and Wodby does not let a
+# secret setting become a plain one under the same name.
+- name: admin-username
   title: Admin username
   description: Username for the initial Nextcloud administrator account.
   default: admin
@@ -101,7 +103,7 @@ env:
 # variables. The username is not sensitive, so its setting stays visible and editable; this variable carries it into
 # the secret.
 - name: NEXTCLOUD_ADMIN_USER
-  value: '{{settings.admin-user}}'
+  value: '{{settings.admin-username}}'
   secret: true
 
 links:
