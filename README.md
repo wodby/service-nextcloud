@@ -28,7 +28,7 @@ Nextcloud community.
 | Service links | PostgreSQL and Redis required; SMTP optional |
 | Integrations | Optional S3 primary storage through AWS S3, Cloudflare R2, or Backblaze B2 |
 | Storage | Persistent volume for `/var/www/html`; optional S3 bucket for file content |
-| Helm | `nextcloud/nextcloud` chart version `9.4.1` |
+| Helm | `nextcloud/nextcloud` chart version `9.4.5` |
 
 ## Runtime behavior
 
@@ -44,6 +44,19 @@ Kubernetes Secret, not through plain Helm values.
 
 Nextcloud background jobs run from the chart's cron sidecar every five minutes.
 The sidecar shares the application image, configuration, and persistent volume.
+It waits until the first installation has finished before it starts.
+
+Heavy daily background jobs run in a six-hour maintenance window that starts
+at 01:00 UTC by default. Change the hour in the `Maintenance window start`
+setting, or clear it to run them at any time. The optional
+`Default phone region` setting accepts phone numbers without a country code.
+Both settings take precedence over values set with `occ config:system:set`.
+
+After the first installation and after each Nextcloud version upgrade, the
+service adds missing optional database indices and runs the file type
+migrations. After an upgrade, this runs in the background while Nextcloud
+starts. The first installation also disables AppAPI, which needs a deploy
+daemon that this service does not provide; enable it after registering one.
 
 The generated Nextcloud configuration reads Wodby's `WODBY_HOSTS` environment
 variable. All active route and App Access hostnames are therefore accepted as
