@@ -81,6 +81,16 @@ settings:
   description: Optional space-separated proxy IP addresses or CIDR ranges trusted for forwarded client headers.
   placeholder: 10.0.0.0/8
   var: TRUSTED_PROXIES
+- name: maintenance-window-start
+  title: Maintenance window start
+  description: Hour (0-23, UTC) when Nextcloud starts its six-hour window for heavy daily background jobs. Leave empty to run them at any time.
+  default: '1'
+  var: NEXTCLOUD_MAINTENANCE_WINDOW_START
+- name: default-phone-region
+  title: Default phone region
+  description: Optional two-letter country code, such as US or DE, used for phone numbers entered without a country code.
+  placeholder: US
+  var: NEXTCLOUD_DEFAULT_PHONE_REGION
 
 env:
 - name: OVERWRITECLIURL
@@ -263,6 +273,57 @@ helm:
     value: true
   - name: cronjob.type
     value: sidecar
+  # The sidecar starts together with the first installation. Its first cron run could fail with "Not installed" and
+  # keep an error on the admin overview for a week, so crond starts only once config.php marks Nextcloud installed.
+  - name: cronjob.sidecar.command
+    value:
+    - /bin/sh
+    - -c
+    - |-
+      until php -r 'include "/var/www/html/config/config.php"; exit(empty($CONFIG["installed"]) ? 1 : 0);' >/dev/null 2>&1; do
+        sleep 10
+      done
+      exec /cron.sh
+  # The image runs these scripts as www-data after it installs or upgrades Nextcloud; a failing script stops the
+  # container, so every step tolerates failure. A fresh database is small, so the installation hook finishes the
+  # optional database maintenance (missing indices, mimetype migrations) at once. It also disables AppAPI, which
+  # needs a deploy daemon that this service does not provide; administrators can enable it after registering one.
+  #
+  # Both hooks delete the theming app's MigrateBackgroundImages job, which `maintenance:repair` and `occ upgrade`
+  # queue. It moves backgrounds left by the dashboard of Nextcloud 25 and older, which an installation of this service
+  # never has, and it fails with NotFoundException when the theming app has no global folder, logging an error that
+  # stays on the admin overview for a week. `background-job:delete` always asks for confirmation; SHELL_INTERACTIVE
+  # lets it read the answer from the pipe.
+  - name: nextcloud.hooks.post-installation
+    value: |-
+      #!/bin/sh
+      occ="php /var/www/html/occ"
+      delete_background_migration_jobs() {
+        $occ background-job:list --class='OCA\Theming\Jobs\MigrateBackgroundImages' --output=json \
+          | php -r 'foreach ((array) json_decode(stream_get_contents(STDIN), true) as $job) { echo $job["id"], PHP_EOL; }' \
+          | while read -r id; do printf 'y\n' | SHELL_INTERACTIVE=1 $occ background-job:delete "$id"; done
+      }
+      $occ db:add-missing-indices || true
+      $occ maintenance:repair --include-expensive || true
+      delete_background_migration_jobs || true
+      $occ app:disable app_api || true
+  # On an existing installation the same maintenance can take long enough to exceed the startup probe, so it runs in
+  # the background while Apache starts.
+  - name: nextcloud.hooks.post-upgrade
+    value: |-
+      #!/bin/sh
+      occ="php /var/www/html/occ"
+      delete_background_migration_jobs() {
+        $occ background-job:list --class='OCA\Theming\Jobs\MigrateBackgroundImages' --output=json \
+          | php -r 'foreach ((array) json_decode(stream_get_contents(STDIN), true) as $job) { echo $job["id"], PHP_EOL; }' \
+          | while read -r id; do printf 'y\n' | SHELL_INTERACTIVE=1 $occ background-job:delete "$id"; done
+      }
+      delete_background_migration_jobs || true
+      (
+        $occ db:add-missing-indices
+        $occ maintenance:repair --include-expensive
+        delete_background_migration_jobs
+      ) </dev/null &
   - name: nextcloud.host
     value: '{{service.primaryHost}}'
   - name: nextcloud.existingSecret.enabled
@@ -301,6 +362,19 @@ helm:
         $hosts = array_values(array_unique(array_filter($hosts, 'is_string')));
         if ($hosts) {
             $CONFIG['trusted_domains'] = $hosts;
+        }
+
+        // The service runs one Nextcloud server (web and cron share it), so a fixed identifier is valid.
+        $CONFIG['serverid'] = 0;
+
+        $maintenanceWindowStart = trim((string) getenv('NEXTCLOUD_MAINTENANCE_WINDOW_START'));
+        if (preg_match('/^([01]?[0-9]|2[0-3])$/', $maintenanceWindowStart)) {
+            $CONFIG['maintenance_window_start'] = (int) $maintenanceWindowStart;
+        }
+
+        $defaultPhoneRegion = strtoupper(trim((string) getenv('NEXTCLOUD_DEFAULT_PHONE_REGION')));
+        if (preg_match('/^[A-Z]{2}$/', $defaultPhoneRegion)) {
+            $CONFIG['default_phone_region'] = $defaultPhoneRegion;
         }
 
         $s3Enabled = filter_var(getenv('NEXTCLOUD_S3_ENABLED'), FILTER_VALIDATE_BOOLEAN);
