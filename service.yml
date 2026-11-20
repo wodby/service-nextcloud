@@ -12,11 +12,13 @@ labels:
 options:
 - version: '34'
   tag: 34.0.6-apache
+  digest: sha256:7563884d167edc55a85c8e5a261f52b10b0eb8c380d02f0c10d1cec7619003c4
   default: true
   eol: '2027-06-30T00:00:00+00:00'
 - version: '33'
   tag: 33.0.11-apache
 
+  digest: sha256:293744abb460e5e1b07a3bd730a687003d1e0c45bdce6645e3c54075e83479ae
   eol: '2027-02-28T00:00:00+00:00'
 endpoints:
 - name: nextcloud
@@ -58,8 +60,7 @@ settings:
   var: PHP_UPLOAD_LIMIT
 - name: apache-body-limit
   title: Apache request body limit
-  description: Maximum request body in bytes. Use 0 for unlimited; Wodby route 
-    limits still apply.
+  description: Maximum request body in bytes. Use 0 for unlimited; Wodby route limits still apply.
   default: '0'
   var: APACHE_BODY_LIMIT
 - name: mail-from-address
@@ -74,15 +75,12 @@ settings:
   var: MAIL_DOMAIN
 - name: s3-bucket
   title: S3 bucket
-  description: Name of an existing, empty bucket dedicated to this Nextcloud 
-    installation. Attach a compatible S3 integration and set this before the 
-    first deployment to use primary object storage.
+  description: Name of an existing, empty bucket dedicated to this Nextcloud installation. Attach a compatible S3 integration and set this before the first deployment to use primary object storage.
   placeholder: nextcloud-files
   var: NEXTCLOUD_S3_BUCKET
 - name: trusted-proxies
   title: Trusted proxies
-  description: Optional space-separated proxy IP addresses or CIDR ranges 
-    trusted for forwarded client headers.
+  description: Optional space-separated proxy IP addresses or CIDR ranges trusted for forwarded client headers.
   placeholder: 10.0.0.0/8
   var: TRUSTED_PROXIES
 
