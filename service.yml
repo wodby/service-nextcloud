@@ -36,12 +36,10 @@ settings:
 - name: admin-user
   title: Admin username
   description: Username for the initial Nextcloud administrator account.
-  placeholder: admin
+  default: admin
   required: true
-  # The chart reads both admin keys from the app service's secret (nextcloud.existingSecret), which holds only secret
-  # variables.
-  secret: true
-  var: NEXTCLOUD_ADMIN_USER
+  # Reaches the chart through the NEXTCLOUD_ADMIN_USER variable below.
+  var: ''
 - name: admin-password
   title: Admin password
   description: Password for the initial Nextcloud administrator account.
@@ -89,6 +87,12 @@ env:
   value: '{{service.primaryURL}}'
 - name: OVERWRITEPROTOCOL
   value: https
+# The chart reads both admin keys from the app service's secret (nextcloud.existingSecret), which holds only secret
+# variables. The username is not sensitive, so its setting stays visible and editable; this variable carries it into
+# the secret.
+- name: NEXTCLOUD_ADMIN_USER
+  value: '{{settings.admin-user}}'
+  secret: true
 
 links:
 - name: postgres
