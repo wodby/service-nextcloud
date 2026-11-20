@@ -36,8 +36,9 @@ The service disables the chart's bundled database, Redis, ingress, and
 HTTPRoute resources. Wodby supplies PostgreSQL, Redis, routing, TLS, and the
 persistent volume instead.
 
-The initial administrator username and password are required secret settings.
-Both apply only to the first installation.
+The initial administrator username defaults to `admin`, and the administrator
+password is a required secret setting. Both apply only to the first
+installation.
 
 The PostgreSQL and Redis passwords reach the chart through the app service's
 Kubernetes Secret, not through plain Helm values.
