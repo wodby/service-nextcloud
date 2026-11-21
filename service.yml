@@ -78,6 +78,11 @@ settings:
   description: Name of an existing, empty bucket dedicated to this Nextcloud installation. Attach a compatible S3 integration and set this before the first deployment to use primary object storage.
   placeholder: nextcloud-files
   var: NEXTCLOUD_S3_BUCKET
+- name: s3-region
+  title: S3 region
+  description: Optional region of the bucket for Wasabi or S3-compatible primary storage, such as eu-central-1. Leave empty to use us-east-1. Amazon S3, Cloudflare R2 and Backblaze B2 take the region from their integration.
+  placeholder: us-east-1
+  var: NEXTCLOUD_S3_BUCKET_REGION
 - name: trusted-proxies
   title: Trusted proxies
   description: Optional space-separated proxy IP addresses or CIDR ranges trusted for forwarded client headers.
@@ -200,6 +205,35 @@ integrations:
       value: '{{integration.fields.application_key_id}}'
     - name: NEXTCLOUD_S3_SECRET
       value: '{{integration.fields.application_key}}'
+      secret: true
+    - name: NEXTCLOUD_S3_PATH_STYLE
+      value: 'true'
+  # Wasabi and S3-compatible integrations carry the s3 label too, so without an entry here they could be attached and
+  # silently leave files on the volume. Their regions come from the S3 region setting: the Wasabi integration has no
+  # region, and an S3-compatible integration's optional region field has no stored value when it was left empty.
+  - name: wasabi
+    env:
+    - name: NEXTCLOUD_S3_ENABLED
+      value: 'true'
+    - name: NEXTCLOUD_S3_PROVIDER
+      value: wasabi
+    - name: NEXTCLOUD_S3_KEY
+      value: '{{integration.fields.access_key}}'
+    - name: NEXTCLOUD_S3_SECRET
+      value: '{{integration.fields.secret_key}}'
+      secret: true
+    - name: NEXTCLOUD_S3_PATH_STYLE
+      value: 'true'
+  - name: s3-compatible
+    env:
+    - name: NEXTCLOUD_S3_ENABLED
+      value: 'true'
+    - name: NEXTCLOUD_S3_ENDPOINT
+      value: '{{integration.fields.endpoint}}'
+    - name: NEXTCLOUD_S3_KEY
+      value: '{{integration.fields.access_key_id}}'
+    - name: NEXTCLOUD_S3_SECRET
+      value: '{{integration.fields.secret_access_key}}'
       secret: true
     - name: NEXTCLOUD_S3_PATH_STYLE
       value: 'true'
@@ -392,14 +426,44 @@ helm:
             );
 
             $s3Host = trim((string) getenv('NEXTCLOUD_S3_HOST'));
-            if ($s3Host !== '') {
-                $s3Arguments['hostname'] = $s3Host;
-                $s3Arguments['port'] = 443;
+            $s3Port = 443;
+            // S3-compatible integrations store the endpoint as an https:// URL, optionally with a port.
+            $s3Endpoint = trim((string) getenv('NEXTCLOUD_S3_ENDPOINT'));
+            if ($s3Host === '' && $s3Endpoint !== '') {
+                $s3EndpointParts = parse_url(strpos($s3Endpoint, '://') === false ? 'https://' . $s3Endpoint : $s3Endpoint);
+                if (is_array($s3EndpointParts) && !empty($s3EndpointParts['host'])) {
+                    $s3Host = $s3EndpointParts['host'];
+                    if (!empty($s3EndpointParts['port'])) {
+                        $s3Port = (int) $s3EndpointParts['port'];
+                    }
+                }
             }
 
             $s3Region = trim((string) getenv('NEXTCLOUD_S3_REGION'));
             if ($s3Region === '' && preg_match('/^s3\.([^.]+)\.backblazeb2\.com$/', $s3Host, $matches)) {
                 $s3Region = $matches[1];
+            }
+            // The S3 region setting fills in the region for providers whose integration has none.
+            $s3BucketRegion = trim((string) getenv('NEXTCLOUD_S3_BUCKET_REGION'));
+            if ($s3Region === '' && preg_match('/^[a-z0-9-]+$/', $s3BucketRegion)) {
+                $s3Region = $s3BucketRegion;
+            }
+            if (getenv('NEXTCLOUD_S3_PROVIDER') === 'wasabi') {
+                if ($s3Region === '') {
+                    $s3Region = 'us-east-1';
+                }
+                if ($s3Host === '') {
+                    $s3Host = 's3.' . $s3Region . '.wasabisys.com';
+                }
+            }
+            // A custom endpoint without a region uses us-east-1, as Wodby does for the same integration.
+            if ($s3Region === '' && $s3Host !== '') {
+                $s3Region = 'us-east-1';
+            }
+
+            if ($s3Host !== '') {
+                $s3Arguments['hostname'] = $s3Host;
+                $s3Arguments['port'] = $s3Port;
             }
             if ($s3Region !== '') {
                 $s3Arguments['region'] = $s3Region;

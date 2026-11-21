@@ -26,7 +26,7 @@ Nextcloud community.
 | Containers | Nextcloud Apache application and cron sidecar |
 | Endpoint | `nextcloud`: HTTP 8080 (main) |
 | Service links | PostgreSQL and Redis required; SMTP optional |
-| Integrations | Optional S3 primary storage through AWS S3, Cloudflare R2, or Backblaze B2 |
+| Integrations | Optional S3 primary storage through AWS S3, Cloudflare R2, Backblaze B2, Wasabi, or an S3-compatible service |
 | Storage | Persistent volume for `/var/www/html`; optional S3 bucket for file content |
 | Helm | `nextcloud/nextcloud` chart version `9.4.5` |
 
@@ -77,10 +77,16 @@ broader than the cluster's actual proxy network.
 ## S3 primary storage
 
 The optional `S3 primary storage` integration supports Amazon S3, Cloudflare
-R2, and Backblaze B2. Create an empty bucket dedicated to the Nextcloud
-installation, attach the matching storage integration, and enter its name in
-the `S3 bucket` setting before the first deployment. Both the integration and
-bucket setting are required to activate object storage.
+R2, Backblaze B2, Wasabi, and S3-compatible services. Create an empty bucket
+dedicated to the Nextcloud installation, attach the matching storage
+integration, and enter its name in the `S3 bucket` setting before the first
+deployment. Both the integration and bucket setting are required to activate
+object storage.
+
+For Wasabi and S3-compatible services, enter the bucket's region in the
+`S3 region` setting, for example `eu-central-1`; it defaults to `us-east-1`.
+Wasabi buckets use the endpoint for that region. S3-compatible services use the
+endpoint from the integration with path-style requests.
 
 Primary object storage must not be enabled on an existing installation: doing
 so makes files already stored on the persistent volume inaccessible. Nextcloud
