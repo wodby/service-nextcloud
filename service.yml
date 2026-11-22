@@ -511,5 +511,7 @@ workloads:
       request:
         cpu: 10
         memory: 80
+    # The chart renders the cron sidecar with the nextcloud container's env.
     helm:
       resources: cronjob.sidecar.resources
+      sharedEnvFrom: nextcloud
