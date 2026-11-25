@@ -12,13 +12,13 @@ labels:
 options:
 - version: '34'
   tag: 34.0.6-apache
-  digest: sha256:7563884d167edc55a85c8e5a261f52b10b0eb8c380d02f0c10d1cec7619003c4
+  digest: sha256:82f16a4729bf5246782960824d9a5a1d48d9aa0ad36beae2f42d3ad7c6843646
   default: true
   eol: '2027-06-30T00:00:00+00:00'
 - version: '33'
   tag: 33.0.11-apache
 
-  digest: sha256:293744abb460e5e1b07a3bd730a687003d1e0c45bdce6645e3c54075e83479ae
+  digest: sha256:73d52a6c57497a619120d1fca99d559f09dad52fb5e542051e31ebc66e05c7f3
   eol: '2027-02-28T00:00:00+00:00'
 endpoints:
 - name: nextcloud
