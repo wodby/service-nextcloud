@@ -256,7 +256,7 @@ helm:
   name: nextcloud
   source: https://nextcloud.github.io/helm/
   chart: nextcloud/nextcloud
-  version: 9.4.5
+  version: 9.4.6
   valueMappings:
     replicas: replicaCount
     nameOverride: nameOverride
